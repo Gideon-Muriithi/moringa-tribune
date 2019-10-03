@@ -13,11 +13,7 @@ class Editor(models.Model):
     def save_editor(self):
         self.save()
 
-    # try:
-    #     editor = Editor.objects.get(email='example@mail.com')
-    #     print('Editor found.')
-    # except DoesNotExist:
-    #     print('Editor was not found!') 
+    
 class tags(models.Model):
     name = models.CharField(max_length=30)
 
