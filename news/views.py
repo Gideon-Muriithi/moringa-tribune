@@ -1,10 +1,17 @@
 from django.shortcuts import render,redirect
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, Http404,JsonResponse
 import datetime as dt
 from .models import Article, NewsLetterRecipients
 from .forms import NewsLetterForm, NewArticleForm
 from .email import send_welcome_email
 from django.contrib.auth.decorators import login_required
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import  MoringaMerch
+from .serializer import MerchSerializer
+from rest_framework import status
+
+
 
 def convert_dates(dates):
     # Function that gets the weekday number for the date.
@@ -18,21 +25,18 @@ def convert_dates(dates):
 def news_of_day(request):
     date = dt.date.today()
     news = Article.todays_news()
-
-    if request.method == 'POST':
-        form = NewsLetterForm(request.POST)
-        if form.is_valid():
-            name = form.cleaned_data['your_name']
-            email = form.cleaned_data['email']
-            recipient = NewsLetterRecipients(name = name,email =email)
-            recipient.save()
-            send_welcome_email(name,email)
-
-            HttpResponseRedirect('news_of_day')
-    else:
-        form = NewsLetterForm()
-
+    form = NewsLetterForm()
+       
     return render(request, 'all-news/today-news.html', {'date':date, "news":news, 'letterForm': form})
+
+def newsletter(request):
+    name = request.POST.get('your_name')
+    email = request.POST.get('email')
+    recipient = NewsLetterRecipients(name = name,email =email)
+    recipient.save()
+    send_welcome_email(name,email)
+    data = {'success': 'You have been successfully been added to the mailing list'}
+    return JsonResponse(data)
 
 
 @login_required(login_url='/accounts/login/')
@@ -89,3 +93,15 @@ def article(request,article_id):
         raise Http404()
     return render(request,"all-news/article.html", {"article":article})
 
+class MerchList(APIView):
+    def get(self, request, format=None):
+        all_merch = MoringaMerch.objects.all()
+        serializers = MerchSerializer(all_merch, many=True)
+        return Response(serializers.data)
+
+    def post(self, request, format=None):
+        serializers = MerchSerializer(data=request.data)
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data, status=status.HTTP_201_CREATED)
+        return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
